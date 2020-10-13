@@ -3,11 +3,12 @@ const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
 const MongoClient = require('mongodb').MongoClient
+const ObjectID = require('mongodb').ObjectID
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
 
-let db
+var db
 
 let auto = [
   {
@@ -28,14 +29,27 @@ app.get('/', (req, res) => {
   res.send('Hello World')
 })
 app.get('/auto', (req, res) => {
-  res.send(auto)
+  db.collection('auto').find().toArray((err, docs) => {
+    if (err) {
+      console.log(err)
+      res.sendStatus(500)
+    }
+    res.send(docs)
+  })
 })
 app.get('/auto/:name', (req, res) => {
   // console.log(req.params)
-  const getModel = auto.find((model) => {
-    return model.name === req.params.name
+  // const getModel = auto.find((model) => {
+  //   return model.name === req.params.name
+  // })
+  // res.send(getModel ? "true" : "false")
+  db.collection('auto').findOne({ _id: ObjectID(req.params.name) }, (err, doc) => {
+    if (err) {
+      console.log(err)
+      res.sendStatus(500)
+    }
+    res.send(doc)
   })
-  res.send(getModel ? "true" : "false")
 })
 
 app.post('/', (req, res) => {
@@ -47,8 +61,13 @@ app.post('/auto', (req, res) => {
     name: req.body.name,
     foundation: req.body.foundation
   }
-  auto.push(model)
-  res.send(auto)
+  db.collection('auto').insertOne(model, (err, result) => {
+    if (err) {
+      console.log(err)
+      return res.sendStatus(500)
+    }
+    res.send(model)
+  })
 })
 
 app.put('/auto/:name', (req, res) => {
@@ -69,9 +88,9 @@ app.delete('/auto/:name', (req, res) => {
 
 
 
-MongoClient.connect('mongodb://localhost:27017/myapi', { useUnifiedTopology: true }, (err, database) => {
+MongoClient.connect('mongodb://localhost:27017', { useUnifiedTopology: true }, (err, client) => {
   if (err) console.log(err)
-  db = database
+  db = client.db('myapi')
   app.listen(7000, () => {
     console.log('Server has started on 7000 port')
   })
